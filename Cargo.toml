@@ -1,0 +1,11 @@
+[package]
+name = "gtk-test2"
+version = "0.1.0"
+authors = ["Journeyman <jman@storiepvtride.it>"]
+edition = "2018"
+
+[dependencies]
+glib = "0.7.1"
+gio = "0.6.0"
+gdk = "0.10.0"
+gtk = "0.6.0"

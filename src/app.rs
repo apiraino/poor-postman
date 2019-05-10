@@ -1,62 +1,91 @@
-use gdk;
-use gio::{self, prelude::*};
-use glib;
-use gtk::{self, prelude::*};
-
 use std::cell::RefCell;
 use std::error;
-use std::ops;
-use std::rc::{Rc, Weak};
+use std::thread;
+use std::time::Duration;
 
-// This represents our main application window.
+use gio::{self, prelude::*};
+use glib::{self, prelude::*};
+use gtk::{self, prelude::*};
+
+use reqwest;
+
 #[derive(Clone)]
-pub struct App(Rc<AppInner>);
-
-// Deref into the contained struct to make usage a bit more ergonomic
-impl ops::Deref for App {
-    type Target = AppInner;
-
-    fn deref(&self) -> &AppInner {
-        &*self.0
-    }
-}
-
-// App components
-#[derive(Clone)]
-pub struct AppInner {
+pub struct App {
     main_window: gtk::ApplicationWindow,
-    // _header_bar: HeaderBar,
+    url_input: gtk::Entry
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Action {
     Quit,
-    // Settings,
-    // About,
-    // Snapshot(SnapshotState),
-    // Record(RecordState),
 }
 
 impl App {
     fn new(application: &gtk::Application) -> Result<App, Box<dyn error::Error>> {
-        // Here build the UI but don't show it yet
-        let window = gtk::ApplicationWindow::new(application);
 
-        window.set_title("GTK test");
-        window.set_border_width(5);
-        window.set_position(gtk::WindowPosition::Center);
-        window.set_default_size(840, 480);
+        let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+
+        // Here build the UI but don't show it yet
+        let main_window = gtk::ApplicationWindow::new(application);
+        main_window.set_title("GTK test");
+        main_window.set_border_width(5);
+        main_window.set_position(gtk::WindowPosition::Center);
+        main_window.set_default_size(840, 480);
 
         // Create headerbar for the application window
         // let header_bar = HeaderBar::new(&window);
 
-        let app = App(Rc::new(AppInner {
-            main_window: window,
-            // _header_bar: header_bar,
+        // create a widget container,
+        let layout = gtk::Box::new(gtk::Orientation::Vertical, 5);
+
+        // Create a title label
+        let url_title = gtk::Label::new(None);
+        url_title.set_markup("<big>Type in your URL</big>");
+
+        // Pressing Alt+T will activate this button
+        let button = gtk::Button::new();
+        let label = gtk::Label::new_with_mnemonic(Some("_Trigger request"));
+        button.add(&label);
+
+        let url_input = gtk::Entry::new();
+        url_input.set_placeholder_text("https://your.url");
+        url_input.connect_activate(clone!(button, tx => move |_btn| {
+            eprintln!("user pressed Return!");
+            // disable button
+            // and trigger HTTP thread
+            spawn_thread(&tx);
         }));
+
+        // container for the response
+        let response_container = gtk::TextView::new();
+        response_container.set_editable(false);
+        let buf = response_container.get_buffer().expect("I thought it could work...");
+        buf.set_text("Hey, placeholder text");
+
+        // add all widgets
+        layout.add(&url_title);
+        layout.add(&url_input);
+        layout.add(&button);
+        layout.pack_start(&response_container, true, true, 10);
+
+        // add the widget container to the window
+        main_window.add(&layout);
+
+        let app = App {
+            main_window,
+            url_input
+            // _header_bar: header_bar,
+        };
 
         // Create the application actions
         Action::create(&app, &application);
+
+        // attach thread receiver
+        rx.attach(None, move |text| {
+            buf.set_text(&text);
+            // do I need this?
+            glib::Continue(true)
+        });
 
         Ok(app)
     }
@@ -67,10 +96,6 @@ impl App {
             Ok(app) => app,
             Err(err) => {
                 eprintln!("Error creating app: {}",err);
-                // utils::show_error_dialog (
-                //     true,
-                //     format!("Error creating application: {}", err).as_str(),
-                // );
                 return;
             }
         };
@@ -79,6 +104,7 @@ impl App {
             app.on_activate();
         }));
 
+        // cant get rid of this RefCell wrapping ...
         let app_container = RefCell::new(Some(app));
         application.connect_shutdown(move |_| {
             let app = app_container
@@ -108,15 +134,11 @@ impl Action {
     pub fn full_name(self) -> &'static str {
         match self {
             Action::Quit => "app.quit",
-            // Action::Settings => "app.settings",
-            // Action::About => "app.about",
-            // Action::Snapshot(_) => "app.snapshot",
-            // Action::Record(_) => "app.record",
         }
     }
 
     // Create our application actions here
-    fn create(app: &App, application: &gtk::Application) {
+    fn create(_app: &App, application: &gtk::Application) {
         eprintln!("Creating actions!");
 
         // When activated, shuts down the application
@@ -127,4 +149,14 @@ impl Action {
         application.set_accels_for_action(Action::Quit.full_name(), &["<Primary>Q"]);
         application.add_action(&quit);
     }
+}
+
+fn spawn_thread(tx: &glib::Sender<String>) {
+    eprintln!("spawing thread...");
+    thread::spawn(clone!(tx => move|| {
+        thread::sleep(Duration::from_millis(500));
+        // send result to channel
+        tx.send(format!("Text from another thread"))
+            .expect("Couldn't send data to channel");
+    }));
 }

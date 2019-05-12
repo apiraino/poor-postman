@@ -83,7 +83,7 @@ impl App {
         // attach thread receiver
         rx.attach(None, move |text| {
             buf.set_text(&text);
-            // do I need this?
+            // keeps the channel open
             glib::Continue(true)
         });
 
@@ -149,14 +149,4 @@ impl Action {
         application.set_accels_for_action(Action::Quit.full_name(), &["<Primary>Q"]);
         application.add_action(&quit);
     }
-}
-
-fn spawn_thread(tx: &glib::Sender<String>) {
-    eprintln!("spawing thread...");
-    thread::spawn(clone!(tx => move|| {
-        thread::sleep(Duration::from_millis(500));
-        // send result to channel
-        tx.send(format!("Text from another thread"))
-            .expect("Couldn't send data to channel");
-    }));
 }

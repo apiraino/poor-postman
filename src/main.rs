@@ -11,6 +11,7 @@ use std::error;
 #[macro_use]
 mod macros;
 mod app;
+mod utils;
 
 use crate::app::App;
 

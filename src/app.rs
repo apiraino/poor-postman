@@ -9,6 +9,8 @@ use gtk::{self, prelude::*};
 
 use reqwest;
 
+use crate::utils::*;
+
 #[derive(Clone)]
 pub struct App {
     main_window: gtk::ApplicationWindow,
@@ -49,7 +51,7 @@ impl App {
 
         let url_input = gtk::Entry::new();
         url_input.set_placeholder_text("https://your.url");
-        url_input.connect_activate(clone!(button, tx => move |_btn| {
+        url_input.connect_activate(clone!(button, tx => move |_entry_text| {
             eprintln!("user pressed Return!");
             // disable button
             // and trigger HTTP thread

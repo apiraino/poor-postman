@@ -8,10 +8,13 @@ use gio::prelude::*;
 use std::env::args;
 use std::error;
 
+#[macro_use] extern crate serde_json;
+
 #[macro_use]
 mod macros;
 mod app;
 mod utils;
+// mod http_client;
 
 use crate::app::App;
 

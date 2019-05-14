@@ -1,15 +1,12 @@
 use std::cell::RefCell;
 use std::error;
-use std::thread;
-use std::time::Duration;
 
 use gio::{self, prelude::*};
-use glib::{self, prelude::*};
+// use glib::{self, prelude::*};
 use gtk::{self, prelude::*};
 
-use reqwest;
-
 use crate::utils::*;
+// use crate::http_client::HttpClient;
 
 #[derive(Clone)]
 pub struct App {
@@ -27,9 +24,11 @@ impl App {
 
         let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
+        // let client = HttpClient::new();
+
         // Here build the UI but don't show it yet
         let main_window = gtk::ApplicationWindow::new(application);
-        main_window.set_title("GTK test");
+        main_window.set_title("(poor) Postman");
         main_window.set_border_width(5);
         main_window.set_position(gtk::WindowPosition::Center);
         main_window.set_default_size(840, 480);
@@ -42,31 +41,54 @@ impl App {
 
         // Create a title label
         let url_title = gtk::Label::new(None);
-        url_title.set_markup("<big>Type in your URL</big>");
+        url_title.set_markup("<big>Type in your URL (and press Enter)</big>");
 
         // Pressing Alt+T will activate this button
         let button = gtk::Button::new();
+        button.connect_clicked(clone!(button => move |_|{
+            button.set_sensitive(false);
+        }));
         let label = gtk::Label::new_with_mnemonic(Some("_Trigger request"));
         button.add(&label);
 
         let url_input = gtk::Entry::new();
-        url_input.set_placeholder_text("https://your.url");
-        url_input.connect_activate(clone!(button, tx => move |_entry_text| {
-            eprintln!("user pressed Return!");
-            // disable button
+        url_input.set_placeholder_text("(poor) Postman");
+        url_input.insert_text("http://httpbin.org/get", &mut 0);
+        // url_input.insert_text("https://www.storiepvtride.it/test.php", &mut 0);
+
+        let verb_selector = gtk::ComboBoxText::new();
+        verb_selector.insert(0, "ID0", "GET");
+        verb_selector.insert(1, "ID1", "POST");
+        verb_selector.set_active(Some(0));
+
+        let verb_url_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        verb_url_row.add(&verb_selector);
+        verb_url_row.pack_start(&url_input, true, true, 0);
+
+        // connect everything to the callback
+        url_input.connect_activate(clone!(button, verb_selector, tx => move |_entry| {
+            button.set_sensitive(false);
             // and trigger HTTP thread
-            spawn_thread(&tx);
+            let url = String::from(_entry.get_buffer().get_text());
+            spawn_thread(
+                &tx,
+                verb_selector
+                    .get_active_text()
+                    .expect("Failed to get widget ID")
+                    .to_string(),
+                url);
         }));
 
         // container for the response
         let response_container = gtk::TextView::new();
         response_container.set_editable(false);
+        response_container.set_wrap_mode(gtk::WrapMode::Word);
         let buf = response_container.get_buffer().expect("I thought it could work...");
-        buf.set_text("Hey, placeholder text");
+        buf.set_text("The response will appear here...");
 
         // add all widgets
         layout.add(&url_title);
-        layout.add(&url_input);
+        layout.add(&verb_url_row);
         layout.add(&button);
         layout.pack_start(&response_container, true, true, 10);
 
@@ -84,7 +106,10 @@ impl App {
 
         // attach thread receiver
         rx.attach(None, move |text| {
+            // let text = format_response(text);
             buf.set_text(&text);
+            // enable the button again
+            button.set_sensitive(true);
             // keeps the channel open
             glib::Continue(true)
         });

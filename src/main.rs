@@ -14,7 +14,7 @@ use std::error;
 mod macros;
 mod app;
 mod utils;
-// mod http_client;
+mod http_client;
 
 use crate::app::App;
 

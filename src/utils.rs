@@ -1,79 +1,38 @@
 use std::thread;
 
-// use crate::http_client::HttpClient;
+use crate::http_client::{APIResponse, HttpClient};
 
-use reqwest::Client;
 use reqwest::Method;
 use reqwest::header::*;
-use serde_derive::Deserialize;
-use serde_json::Value;
 
-#[derive(Debug, Deserialize)]
-pub struct APIResponse {
-    status_code: u16,
-    data: Value
-}
-
-// TODO: use str slice
 pub fn spawn_thread(tx: &glib::Sender<String>, method: String, url: String) {
     eprintln!("spawing thread...");
-    let client = Client::new();
     let verb = Method::from_bytes(method.as_bytes())
         .expect("Failed to decypher HTTP verb requested");
     eprintln!("Method will be {:?}", verb);
 
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, HeaderValue::from_static("poor-postman"));
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
     headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
 
-    // TODO work around these values moved
     thread::spawn(clone_old!(tx => move || {
-
+        let client = HttpClient::new();
         match verb {
             Method::POST => {
-                let req = client
-                    .request(verb, &url)
-                    .headers(headers);
+                headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 let data = json!({
                     "key": "value"
                 });
-                let mut resp = req
-                    .json(&data)
-                    .send()
-                    .expect("Request failed");
-                eprintln!("resp data: {:?}", resp);
-                let response = APIResponse {
-                    status_code: resp.status().as_u16(),
-                    data: resp.json().unwrap_or(
-                        json!({
-                            "status": resp.status().as_u16(),
-                            "detail": "Failed to deserialize response"
-                        }))
-                };
-                let content = format_response(response);
+                let resp_data = client.post(&url, headers, &data);
+                eprintln!("resp data: {:?}", resp_data);
+                let content = format_response(resp_data);
                 // send result to channel
                 tx.send(content)
                     .expect("Couldn't send data to channel");
             },
             Method::GET => {
-                let req = client
-                    .request(verb, &url)
-                    .headers(headers);
-                let mut resp = req
-                    // .json(&data)
-                    .send()
-                    .expect("Request failed");
-                eprintln!("resp data: {:?}", resp);
-                let response = APIResponse {
-                    status_code: resp.status().as_u16(),
-                    data: resp.json().unwrap_or(
-                        json!({
-                            "status": resp.status().as_u16(),
-                            "detail": "Failed to deserialize response"
-                        }))
-                };
-                let content = format_response(response);
+                let resp_data = client.get(&url, headers);
+                let content = format_response(resp_data);
                 // send result to channel
                 tx.send(content)
                     .expect("Couldn't send data to channel");

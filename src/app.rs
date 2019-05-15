@@ -54,7 +54,6 @@ impl App {
         let url_input = gtk::Entry::new();
         url_input.set_placeholder_text("(poor) Postman");
         url_input.insert_text("http://httpbin.org/get", &mut 0);
-        // url_input.insert_text("https://www.storiepvtride.it/test.php", &mut 0);
 
         let verb_selector = gtk::ComboBoxText::new();
         verb_selector.insert(0, "ID0", "GET");
@@ -69,14 +68,13 @@ impl App {
         url_input.connect_activate(clone!(button, verb_selector, tx => move |_entry| {
             button.set_sensitive(false);
             // and trigger HTTP thread
-            let url = String::from(_entry.get_buffer().get_text());
             spawn_thread(
                 &tx,
                 verb_selector
                     .get_active_text()
                     .expect("Failed to get widget ID")
                     .to_string(),
-                url);
+                _entry.get_buffer().get_text().to_owned());
         }));
 
         // container for the response

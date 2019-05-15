@@ -1,9 +1,9 @@
 use std::thread;
 
-use crate::http_client::{APIResponse, HttpClient};
-
 use reqwest::Method;
 use reqwest::header::*;
+
+use crate::http_client::{APIResponse, HttpClient};
 
 pub fn spawn_thread(tx: &glib::Sender<String>, method: String, url: String) {
     eprintln!("spawing thread...");
@@ -19,12 +19,11 @@ pub fn spawn_thread(tx: &glib::Sender<String>, method: String, url: String) {
         let client = HttpClient::new();
         match verb {
             Method::POST => {
-                headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 let data = json!({
                     "key": "value"
                 });
+                headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 let resp_data = client.post(&url, headers, &data);
-                eprintln!("resp data: {:?}", resp_data);
                 let content = format_response(resp_data);
                 // send result to channel
                 tx.send(content)
@@ -41,7 +40,6 @@ pub fn spawn_thread(tx: &glib::Sender<String>, method: String, url: String) {
                 eprintln!("Not implemented yet");
             }
         }
-
     }));
 }
 

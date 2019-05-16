@@ -41,15 +41,18 @@ impl App {
 
         // Create a title label
         let url_title = gtk::Label::new(None);
-        url_title.set_markup("<big>Type in your URL (and press Enter)</big>");
+        url_title.set_markup("<big>Type in your URL</big>");
 
         // Pressing Alt+T will activate this button
         let button = gtk::Button::new();
-        button.connect_clicked(clone!(button => move |_|{
-            button.set_sensitive(false);
-        }));
-        let label = gtk::Label::new_with_mnemonic(Some("_Trigger request"));
-        button.add(&label);
+        let btn_label = gtk::Label::new_with_mnemonic(
+            Some("_Click to trigger request")
+        );
+        button.add(&btn_label);
+
+        // Trigger request button
+        let trigger_btn_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        trigger_btn_row.pack_start(&button, false, true, 10);
 
         let url_input = gtk::Entry::new();
         url_input.set_placeholder_text("(poor) Postman");
@@ -62,19 +65,68 @@ impl App {
 
         let verb_url_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         verb_url_row.add(&verb_selector);
+        // http://gtk-rs.org/docs/gtk/prelude/trait.BoxExt.html#tymethod.pack_start
+        // params: child, expand, fill, padding (px)
         verb_url_row.pack_start(&url_input, true, true, 0);
 
-        // connect everything to the callback
-        url_input.connect_activate(clone!(button, verb_selector, tx => move |_entry| {
+        // Payload horizontal block
+        let payload_title = gtk::Label::new(None);
+        payload_title.set_markup("<big>Payload</big>");
+        let payload_input = gtk::Entry::new();
+        payload_input.insert_text(r#"ex. {"k": "key","v": "val"}"#, &mut 0);
+        payload_input.set_sensitive(false);
+        let payload_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        payload_row.set_sensitive(false);
+        payload_row.add(&payload_title);
+        payload_row.pack_start(&payload_input, true, true, 0);
+
+        // when POST is selected, activate the payload input box
+        // TODO: why don't I need to also clone "payload_input"?
+        verb_selector.connect_changed(clone!(payload_row, payload_input => move |verb_selector| {
+            let txt = verb_selector
+                .get_active_text()
+                .expect("Failed to get widget value");
+            match txt.as_ref() {
+                "POST" => {
+                    payload_row.set_sensitive(true);
+                    payload_input.set_sensitive(true);
+                }
+                _ => {
+                    payload_row.set_sensitive(false);
+                    payload_input.set_sensitive(false);
+                }
+            }
+        }));
+
+        // connect the Button click to the callback
+        button.connect_clicked(clone!(button, verb_selector, url_input,
+                                      payload_input, tx => move |_| {
+            button.set_sensitive(false);
+            spawn_thread(
+                &tx,
+                verb_selector
+                    .get_active_text()
+                    .expect("Failed to get widget value")
+                    .to_string(),
+                url_input.get_buffer().get_text().to_owned(),
+                Some(json!(payload_input.get_buffer().get_text().to_owned()))
+            );
+        }));
+
+        // connect the <Return> keypress to the callback
+        url_input.connect_activate(clone!(button, verb_selector,
+                                          payload_input, tx => move |_entry| {
             button.set_sensitive(false);
             // and trigger HTTP thread
             spawn_thread(
                 &tx,
                 verb_selector
                     .get_active_text()
-                    .expect("Failed to get widget ID")
+                    .expect("Failed to get widget text")
                     .to_string(),
-                _entry.get_buffer().get_text().to_owned());
+                _entry.get_buffer().get_text().to_owned(),
+                Some(json!(payload_input.get_buffer().get_text().to_owned()))
+            );
         }));
 
         // container for the response
@@ -87,7 +139,8 @@ impl App {
         // add all widgets
         layout.add(&url_title);
         layout.add(&verb_url_row);
-        layout.add(&button);
+        layout.pack_start(&payload_row, false, true, 10);
+        layout.add(&trigger_btn_row);
         layout.pack_start(&response_container, true, true, 10);
 
         // add the widget container to the window

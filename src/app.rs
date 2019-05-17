@@ -17,6 +17,20 @@ pub enum Action {
     Quit,
 }
 
+trait GtkComboBoxTrait {
+    fn get_text(self: &Self) -> String;
+}
+
+impl GtkComboBoxTrait for gtk::ComboBoxText {
+    fn get_text(&self) -> String {
+       let s = self
+            .get_active_text()
+            .expect("Failed to get widget text")
+            .to_string();
+        s.clone()
+    }
+}
+
 impl App {
     fn new(application: &gtk::Application) -> Result<App, Box<dyn error::Error>> {
 
@@ -79,9 +93,7 @@ impl App {
         // when POST is selected, activate the payload input box
         // TODO: why don't I need to also clone "payload_input"?
         verb_selector.connect_changed(clone!(payload_row, payload_input => move |verb_selector| {
-            let txt = verb_selector
-                .get_active_text()
-                .expect("Failed to get widget value");
+            let txt = gtk::ComboBoxText::get_text(&verb_selector);
             match txt.as_ref() {
                 "POST" => {
                     payload_row.set_sensitive(true);
@@ -98,12 +110,10 @@ impl App {
         button.connect_clicked(clone!(button, verb_selector, url_input,
                                       payload_input, tx => move |_| {
             button.set_sensitive(false);
+            // and trigger HTTP thread
             spawn_thread(
                 &tx,
-                verb_selector
-                    .get_active_text()
-                    .expect("Failed to get widget value")
-                    .to_string(),
+                gtk::ComboBoxText::get_text(&verb_selector),
                 url_input.get_buffer().get_text().to_owned(),
                 Some(json!(payload_input.get_buffer().get_text().to_owned()))
             );
@@ -113,13 +123,9 @@ impl App {
         url_input.connect_activate(clone!(button, verb_selector,
                                           payload_input, tx => move |_entry| {
             button.set_sensitive(false);
-            // and trigger HTTP thread
             spawn_thread(
                 &tx,
-                verb_selector
-                    .get_active_text()
-                    .expect("Failed to get widget text")
-                    .to_string(),
+                gtk::ComboBoxText::get_text(&verb_selector),
                 _entry.get_buffer().get_text().to_owned(),
                 Some(json!(payload_input.get_buffer().get_text().to_owned()))
             );

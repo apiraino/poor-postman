@@ -36,7 +36,6 @@ pub fn spawn_thread(tx: &glib::Sender<String>,
             Method::GET => {
                 let resp_data = client.get(&url, headers);
                 let content = format_response(resp_data);
-                // send result to channel
                 tx.send(content)
                     .expect("Couldn't send data to channel");
             },

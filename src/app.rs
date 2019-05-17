@@ -2,11 +2,9 @@ use std::cell::RefCell;
 use std::error;
 
 use gio::{self, prelude::*};
-// use glib::{self, prelude::*};
 use gtk::{self, prelude::*};
 
 use crate::utils::*;
-// use crate::http_client::HttpClient;
 
 #[derive(Clone)]
 pub struct App {
@@ -23,8 +21,6 @@ impl App {
     fn new(application: &gtk::Application) -> Result<App, Box<dyn error::Error>> {
 
         let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
-
-        // let client = HttpClient::new();
 
         // Here build the UI but don't show it yet
         let main_window = gtk::ApplicationWindow::new(application);

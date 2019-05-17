@@ -5,15 +5,19 @@ use gio::{self, prelude::*};
 use gtk::{self, prelude::*};
 
 use crate::utils::*;
+use crate::header_bar::*;
+use crate::about_dialog::*;
 
 #[derive(Clone)]
 pub struct App {
     main_window: gtk::ApplicationWindow,
+    header_bar: HeaderBar,
     url_input: gtk::Entry
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Action {
+    About,
     Quit,
 }
 
@@ -23,11 +27,9 @@ trait GtkComboBoxTrait {
 
 impl GtkComboBoxTrait for gtk::ComboBoxText {
     fn get_text(&self) -> String {
-       let s = self
-            .get_active_text()
+       self.get_active_text()
             .expect("Failed to get widget text")
-            .to_string();
-        s.clone()
+            .to_string()
     }
 }
 
@@ -44,7 +46,7 @@ impl App {
         main_window.set_default_size(840, 480);
 
         // Create headerbar for the application window
-        // let header_bar = HeaderBar::new(&window);
+        let header_bar = HeaderBar::new(&main_window);
 
         // create a widget container,
         let layout = gtk::Box::new(gtk::Orientation::Vertical, 5);
@@ -150,8 +152,8 @@ impl App {
 
         let app = App {
             main_window,
-            url_input
-            // _header_bar: header_bar,
+            url_input,
+            header_bar,
         };
 
         // Create the application actions
@@ -213,6 +215,7 @@ impl Action {
     // The full action name as is used in e.g. menu models
     pub fn full_name(self) -> &'static str {
         match self {
+            Action::About => "app.about",
             Action::Quit => "app.quit",
         }
     }
@@ -220,6 +223,15 @@ impl Action {
     // Create our application actions here
     fn create(_app: &App, application: &gtk::Application) {
         eprintln!("Creating actions!");
+
+        // about action: when activated it will show an about dialog
+        let about = gio::SimpleAction::new("about", None);
+        // let weak_application = application.downgrade();
+        about.connect_activate(clone!(application => move |_action, _parameter| {
+            // let application = upgrade_weak!(weak_application);
+            show_about_dialog(&application);
+        }));
+        application.add_action(&about);
 
         // When activated, shuts down the application
         let quit = gio::SimpleAction::new("quit", None);

@@ -14,6 +14,8 @@ use std::error;
 mod macros;
 mod app;
 mod utils;
+mod header_bar;
+mod about_dialog;
 mod http_client;
 
 use crate::app::App;

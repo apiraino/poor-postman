@@ -6,6 +6,7 @@ use crate::app::Action;
 #[derive(Clone)]
 pub struct HeaderBar {
     // _menu_button: gtk::ToggleButton,
+    pub switch_btn: gtk::Switch,
 }
 
 // Create headerbar for the application
@@ -35,6 +36,10 @@ impl HeaderBar {
         // // Place the button on the left
         // header_bar.pack_start(&toggle_button);
 
+        // Create a switch button
+        let switch_btn = gtk::Switch::new();
+        header_bar.pack_start(&switch_btn);
+
         // Create the menu model with the menu items. These directly activate our application
         // actions by their name
         let main_menu_model = gio::Menu::new();
@@ -49,6 +54,7 @@ impl HeaderBar {
 
         HeaderBar {
             // _menu_button: toggle_button
+            switch_btn
         }
     }
 

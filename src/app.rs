@@ -11,7 +11,7 @@ use crate::about_dialog::*;
 #[derive(Clone)]
 pub struct App {
     main_window: gtk::ApplicationWindow,
-    header_bar: HeaderBar,
+    pub header_bar: HeaderBar,
     url_input: gtk::Entry
 }
 
@@ -226,12 +226,21 @@ impl Action {
 
         // about action: when activated it will show an about dialog
         let about = gio::SimpleAction::new("about", None);
-        // let weak_application = application.downgrade();
         about.connect_activate(clone!(application => move |_action, _parameter| {
-            // let application = upgrade_weak!(weak_application);
             show_about_dialog(&application);
         }));
         application.add_action(&about);
+
+        // switch button action
+        // credits: https://github.com/gtk-rs/examples/blob/master/src/bin/menu_bar_system.rs
+        let switch_action = gio::SimpleAction::new_stateful("switch", None, &false.to_variant());
+        let switch_btn = &_app.header_bar.switch_btn;
+        switch_btn.connect_property_active_notify(clone!(switch_action => move |s| {
+            eprintln!("The switch is now {}", s.get_state());
+            switch_action.change_state(&s.get_active().to_variant());
+        }));
+
+        application.add_action(&switch_action);
 
         // When activated, shuts down the application
         let quit = gio::SimpleAction::new("quit", None);

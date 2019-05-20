@@ -5,7 +5,7 @@ use crate::app::Action;
 
 #[derive(Clone)]
 pub struct HeaderBar {
-    // _menu_button: gtk::ToggleButton,
+    pub toggle_button: gtk::ToggleButton,
     pub switch_btn: gtk::Switch,
 }
 
@@ -25,16 +25,11 @@ impl HeaderBar {
         main_menu.set_image(&main_menu_image);
 
         // Create a toggle button
-        // let toggle_button = gtk::ToggleButton::new();
-        // let toggle_button_image = gtk::Image::new_from_icon_name("camera-photo-symbolic", 1);
-        // toggle_button.set_image(&toggle_button_image);
-        // toggle_button.connect_toggled(|btn| {
-        //     eprintln!("Im in the header...");
-        //     let app = gio::Application::get_default().expect("No default application");
-        //     Action::ActionClickToggle(ToggleButtonState::from(btn.get_active())).trigger(&app);
-        // });
-        // // Place the button on the left
-        // header_bar.pack_start(&toggle_button);
+        let toggle_button = gtk::ToggleButton::new();
+        let toggle_button_image = gtk::Image::new_from_icon_name("camera-photo-symbolic", gtk::IconSize::Button);
+        toggle_button.set_image(&toggle_button_image);
+        // Place the button on the left
+        header_bar.pack_start(&toggle_button);
 
         // Create a switch button
         let switch_btn = gtk::Switch::new();
@@ -53,7 +48,7 @@ impl HeaderBar {
         window.set_titlebar(&header_bar);
 
         HeaderBar {
-            // _menu_button: toggle_button
+            toggle_button,
             switch_btn
         }
     }

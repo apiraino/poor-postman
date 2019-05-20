@@ -19,6 +19,37 @@ pub struct App {
 pub enum Action {
     About,
     Quit,
+    ClickToggle(ToggleButtonState)
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum ToggleButtonState {
+    State1,
+    State2,
+}
+
+impl<'a> From<&'a glib::Variant> for ToggleButtonState {
+    fn from(v: &glib::Variant) -> ToggleButtonState {
+        v.get::<bool>().expect("Invalid record state type").into()
+    }
+}
+
+impl From<bool> for ToggleButtonState {
+    fn from(v: bool) -> ToggleButtonState {
+        match v {
+            false => ToggleButtonState::State1,
+            true => ToggleButtonState::State2,
+        }
+    }
+}
+
+impl From<ToggleButtonState> for glib::Variant {
+    fn from(v: ToggleButtonState) -> glib::Variant {
+        match v {
+            ToggleButtonState::State1 => false.to_variant(),
+            ToggleButtonState::State2 => true.to_variant(),
+        }
+    }
 }
 
 trait GtkComboBoxTrait {
@@ -217,11 +248,12 @@ impl Action {
         match self {
             Action::About => "app.about",
             Action::Quit => "app.quit",
+            Action::ClickToggle(_) => "app.toggle",
         }
     }
 
     // Create our application actions here
-    fn create(_app: &App, application: &gtk::Application) {
+    fn create(app: &App, application: &gtk::Application) {
         eprintln!("Creating actions!");
 
         // about action: when activated it will show an about dialog
@@ -234,13 +266,22 @@ impl Action {
         // switch button action
         // credits: https://github.com/gtk-rs/examples/blob/master/src/bin/menu_bar_system.rs
         let switch_action = gio::SimpleAction::new_stateful("switch", None, &false.to_variant());
-        let switch_btn = &_app.header_bar.switch_btn;
+        let switch_btn = &app.header_bar.switch_btn;
         switch_btn.connect_property_active_notify(clone!(switch_action => move |s| {
-            eprintln!("The switch is now {}", s.get_state());
+            eprintln!("The switch is now {}", &s.get_active().to_variant());
             switch_action.change_state(&s.get_active().to_variant());
         }));
-
         application.add_action(&switch_action);
+
+        // toggle button action
+        let toggle_action = gio::SimpleAction::new_stateful("toggle", None, &false.to_variant());
+        let toggle_btn = &app.header_bar.toggle_button;
+        toggle_btn.connect_toggled(|btn| {
+            eprintln!("Button state is {}", btn.get_active());
+            let app = gio::Application::get_default().expect("No default application");
+            Action::ClickToggle(ToggleButtonState::from(btn.get_active())).trigger(&app);
+        });
+        application.add_action(&toggle_action);
 
         // When activated, shuts down the application
         let quit = gio::SimpleAction::new("quit", None);
@@ -249,5 +290,13 @@ impl Action {
         }));
         application.set_accels_for_action(Action::Quit.full_name(), &["<Primary>Q"]);
         application.add_action(&quit);
+    }
+
+    pub fn trigger<A: IsA<gio::Application> + gio::ActionGroupExt>(self, app: &A) {
+        match self {
+            Action::Quit => app.activate_action("quit", None),
+            Action::About => app.activate_action("about", None),
+            Action::ClickToggle(new_state) => app.change_action_state("toggle", &new_state.into()),
+        }
     }
 }

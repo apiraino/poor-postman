@@ -29,11 +29,11 @@ impl HeaderBar {
         let toggle_button_image = gtk::Image::new_from_icon_name("camera-photo-symbolic", gtk::IconSize::Button);
         toggle_button.set_image(&toggle_button_image);
         // Place the button on the left
-        header_bar.pack_start(&toggle_button);
+        // header_bar.pack_start(&toggle_button);
 
         // Create a switch button
         let switch_btn = gtk::Switch::new();
-        header_bar.pack_start(&switch_btn);
+        // header_bar.pack_start(&switch_btn);
 
         // Create the menu model with the menu items. These directly activate our application
         // actions by their name

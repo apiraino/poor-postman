@@ -1,7 +1,7 @@
 [package]
-name = "gtk-rs-experiments"
+name = "poor-postman"
 version = "0.1.0"
-authors = ["Journeyman <jman@storiepvtride.it>"]
+authors = ["apiraino <apiraino@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]

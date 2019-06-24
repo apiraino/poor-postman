@@ -98,6 +98,7 @@ impl App {
         trigger_btn_row.pack_start(&button, false, true, 10);
 
         let url_input = gtk::Entry::new();
+
         url_input.set_placeholder_text("(poor) Postman");
         url_input.insert_text("http://httpbin.org/get", &mut 0);
 
@@ -110,13 +111,43 @@ impl App {
         verb_url_row.add(&verb_selector);
         // http://gtk-rs.org/docs/gtk/prelude/trait.BoxExt.html#tymethod.pack_start
         // params: child, expand, fill, padding (px)
-        verb_url_row.pack_start(&url_input, true, true, 0);
+        verb_url_row.pack_start(&url_input, true, true, 10);
+
+        // Header settings
+        let header_title = gtk::Label::new(None);
+        header_title.set_markup("<big>Headers:</big>");
+        let header_name_input = gtk::Entry::new();
+        let header_value_input = gtk::Entry::new();
+
+        // header_name_input.set_name("header_name_input");
+        // header_value_input.set_name("header_value_input");
+
+        // autocompletion for header names
+        let data = vec![
+            "Accept",
+            "Authorization",
+            "Content-Type",
+        ];
+        get_header_autocompletion(data, &header_name_input);
+
+        // autocompletion for header values
+        let data = vec![
+            "application/json",
+            "application/txt",
+            "application/xml"
+        ];
+        get_header_autocompletion(data, &header_value_input);
+
+        let headers_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        headers_row.add(&header_title);
+        headers_row.pack_start(&header_name_input, true, true, 10);
+        headers_row.pack_start(&header_value_input, true, true, 10);
 
         // Payload horizontal block
         let payload_title = gtk::Label::new(None);
-        payload_title.set_markup("<big>Payload</big>");
+        payload_title.set_markup("<big>Payload:</big>");
         let payload_input = gtk::Entry::new();
-        payload_input.insert_text(r#"ex. {"k": "key","v": "val"}"#, &mut 0);
+        payload_input.insert_text(r#"{"k": "key","v": "val"}"#, &mut 0);
         payload_input.set_sensitive(false);
         let payload_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         payload_row.set_sensitive(false);
@@ -124,7 +155,6 @@ impl App {
         payload_row.pack_start(&payload_input, true, true, 0);
 
         // when POST is selected, activate the payload input box
-        // TODO: why don't I need to also clone "payload_input"?
         verb_selector.connect_changed(clone!(payload_row, payload_input => move |verb_selector| {
             let txt = gtk::ComboBoxText::get_text(&verb_selector);
             match txt.as_ref() {
@@ -140,29 +170,32 @@ impl App {
         }));
 
         // connect the Button click to the callback
-        button.connect_clicked(clone!(button, verb_selector, url_input,
-                                      payload_input, tx => move |_| {
-            button.set_sensitive(false);
-            // and trigger HTTP thread
-            spawn_thread(
-                &tx,
-                gtk::ComboBoxText::get_text(&verb_selector),
-                url_input.get_buffer().get_text().to_owned(),
-                Some(json!(payload_input.get_buffer().get_text().to_owned()))
-            );
-        }));
+        button.connect_clicked(clone!(
+            button, verb_selector, url_input, payload_input, tx, headers_row => move |_| {
+                button.set_sensitive(false);
+                // and trigger HTTP thread
+                spawn_thread(
+                    &tx,
+                    gtk::ComboBoxText::get_text(&verb_selector),
+                    url_input.get_buffer().get_text().to_owned(),
+                    // compose headers
+                    Some(compose_headers(&headers_row)),
+                    Some(json!(payload_input.get_buffer().get_text().to_owned()))
+                );
+            }));
 
         // connect the <Return> keypress to the callback
-        url_input.connect_activate(clone!(button, verb_selector,
-                                          payload_input, tx => move |_entry| {
-            button.set_sensitive(false);
-            spawn_thread(
-                &tx,
-                gtk::ComboBoxText::get_text(&verb_selector),
-                _entry.get_buffer().get_text().to_owned(),
-                Some(json!(payload_input.get_buffer().get_text().to_owned()))
-            );
-        }));
+        url_input.connect_activate(clone!(
+            button, verb_selector, payload_input, tx, headers_row => move |url_input_fld| {
+                button.set_sensitive(false);
+                spawn_thread(
+                    &tx,
+                    gtk::ComboBoxText::get_text(&verb_selector),
+                    url_input_fld.get_buffer().get_text().to_owned(),
+                    Some(compose_headers(&headers_row)),
+                    Some(json!(payload_input.get_buffer().get_text().to_owned()))
+                );
+            }));
 
         // container for the response
         let response_container = gtk::TextView::new();
@@ -173,9 +206,12 @@ impl App {
 
         // add all widgets
         layout.add(&url_title);
+
         layout.add(&verb_url_row);
-        layout.pack_start(&payload_row, false, true, 10);
+        layout.pack_start(&headers_row, false, false, 10);
+        layout.pack_start(&payload_row, false, false, 10);
         layout.add(&trigger_btn_row);
+
         layout.pack_start(&response_container, true, true, 10);
 
         // add the widget container to the window
@@ -196,7 +232,7 @@ impl App {
             buf.set_text(&text);
             // enable the button again
             button.set_sensitive(true);
-            // keeps the channel open
+            // keep the channel open
             glib::Continue(true)
         });
 

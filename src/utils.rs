@@ -1,33 +1,35 @@
 use std::thread;
 
-use reqwest::Method;
 use reqwest::header::*;
+use reqwest::Method;
 
 use gtk::prelude::*;
 
 use crate::http_client::{APIResponse, HttpClient};
 
-pub fn spawn_thread(tx: &glib::Sender<String>,
-                    method: String,
-                    url: String,
-                    headers: Option<HeaderMap>,
-                    data: Option<serde_json::Value>) {
+pub fn spawn_thread(
+    tx: &glib::Sender<String>,
+    method: String,
+    url: String,
+    headers: Option<HeaderMap>,
+    data: Option<serde_json::Value>,
+) {
     eprintln!("spawing thread...");
-    let verb = Method::from_bytes(method.as_bytes())
-        .expect("Failed to decypher HTTP verb requested");
+    let verb =
+        Method::from_bytes(method.as_bytes()).expect("Failed to decypher HTTP verb requested");
 
     // let mut headers = HeaderMap::new();
     // headers.insert(USER_AGENT, HeaderValue::from_static("poor-postman"));
     // headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
 
-    let _data : serde_json::Value = match data {
+    let _data: serde_json::Value = match data {
         Some(x) => x,
-        None => json!({})
+        None => json!({}),
     };
 
     let mut _headers = match headers {
         Some(x) => x,
-        None => HeaderMap::new()
+        None => HeaderMap::new(),
     };
 
     thread::spawn(clone_old!(tx => move || {
@@ -67,19 +69,13 @@ pub fn get_header_autocompletion(data: Vec<&str>, input_fld: &gtk::Entry) {
 
 fn format_response(response: Result<APIResponse, String>) -> String {
     match response {
-        Ok(_response) => {
-            String::from(
-                format!("{}\n{}",
-                        _response.status_code,
-                        serde_json::to_string_pretty(&_response.data)
-                        .expect("Failed to prettify string")
-                ))
-        },
-        Err(err_msg) => {
-            String::from(format!("Error: {}", err_msg))
-        }
+        Ok(_response) => String::from(format!(
+            "{}\n{}",
+            _response.status_code,
+            serde_json::to_string_pretty(&_response.data).expect("Failed to prettify string")
+        )),
+        Err(err_msg) => String::from(format!("Error: {}", err_msg)),
     }
-
 }
 
 pub fn compose_headers(headers_box: &gtk::Box) -> HeaderMap {
@@ -97,10 +93,7 @@ pub fn compose_headers(headers_box: &gtk::Box) -> HeaderMap {
         let child_down = child.clone().downcast::<gtk::Entry>();
         if child_down.is_ok() {
             // eprintln!("{:#?}", child_down.unwrap());
-            let txt = child_down
-                .expect("this is safe")
-                .get_text()
-                .expect("this is safe");
+            let txt = child_down.expect("this is safe").get_text().expect("this is safe");
             eprintln!("widget value {:?}", txt);
         }
     }
@@ -110,16 +103,12 @@ pub fn compose_headers(headers_box: &gtk::Box) -> HeaderMap {
 }
 
 fn create_list_model(data: Vec<&str>) -> gtk::ListStore {
-    let col_types: [gtk::Type; 1] = [
-        gtk::Type::String,
-    ];
+    let col_types: [gtk::Type; 1] = [gtk::Type::String];
 
     let store = gtk::ListStore::new(&col_types);
     let col_indices: [u32; 1] = [0];
     for d in data.iter() {
-        let values: [&dyn ToValue; 1] = [
-            &d
-        ];
+        let values: [&dyn ToValue; 1] = [&d];
         store.set(&store.append(), &col_indices, &values);
     }
     store

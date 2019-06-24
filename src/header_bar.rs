@@ -21,12 +21,14 @@ impl HeaderBar {
 
         // Create a menu button with the hamburger menu
         let main_menu = gtk::MenuButton::new();
-        let main_menu_image = gtk::Image::new_from_icon_name("open-menu-symbolic", gtk::IconSize::Menu);
+        let main_menu_image =
+            gtk::Image::new_from_icon_name("open-menu-symbolic", gtk::IconSize::Menu);
         main_menu.set_image(&main_menu_image);
 
         // Create a toggle button
         let toggle_button = gtk::ToggleButton::new();
-        let toggle_button_image = gtk::Image::new_from_icon_name("camera-photo-symbolic", gtk::IconSize::Button);
+        let toggle_button_image =
+            gtk::Image::new_from_icon_name("camera-photo-symbolic", gtk::IconSize::Button);
         toggle_button.set_image(&toggle_button_image);
         // Place the button on the left
         // header_bar.pack_start(&toggle_button);
@@ -47,10 +49,6 @@ impl HeaderBar {
         // Insert the headerbar as titlebar into the window
         window.set_titlebar(&header_bar);
 
-        HeaderBar {
-            toggle_button,
-            switch_btn
-        }
+        HeaderBar { toggle_button, switch_btn }
     }
-
 }

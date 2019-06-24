@@ -4,22 +4,22 @@ use std::error;
 use gio::{self, prelude::*};
 use gtk::{self, prelude::*};
 
-use crate::utils::*;
-use crate::header_bar::*;
 use crate::about_dialog::*;
+use crate::header_bar::*;
+use crate::utils::*;
 
 #[derive(Clone)]
 pub struct App {
     main_window: gtk::ApplicationWindow,
     pub header_bar: HeaderBar,
-    url_input: gtk::Entry
+    url_input: gtk::Entry,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Action {
     About,
     Quit,
-    ClickToggle(ToggleButtonState)
+    ClickToggle(ToggleButtonState),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -58,15 +58,12 @@ trait GtkComboBoxTrait {
 
 impl GtkComboBoxTrait for gtk::ComboBoxText {
     fn get_text(&self) -> String {
-       self.get_active_text()
-            .expect("Failed to get widget text")
-            .to_string()
+        self.get_active_text().expect("Failed to get widget text").to_string()
     }
 }
 
 impl App {
     fn new(application: &gtk::Application) -> Result<App, Box<dyn error::Error>> {
-
         let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
 
         // Here build the UI but don't show it yet
@@ -88,9 +85,7 @@ impl App {
 
         // Pressing Alt+T will activate this button
         let button = gtk::Button::new();
-        let btn_label = gtk::Label::new_with_mnemonic(
-            Some("_Click to trigger request")
-        );
+        let btn_label = gtk::Label::new_with_mnemonic(Some("_Click to trigger request"));
         button.add(&btn_label);
 
         // Trigger request button
@@ -123,19 +118,11 @@ impl App {
         // header_value_input.set_name("header_value_input");
 
         // autocompletion for header names
-        let data = vec![
-            "Accept",
-            "Authorization",
-            "Content-Type",
-        ];
+        let data = vec!["Accept", "Authorization", "Content-Type"];
         get_header_autocompletion(data, &header_name_input);
 
         // autocompletion for header values
-        let data = vec![
-            "application/json",
-            "application/txt",
-            "application/xml"
-        ];
+        let data = vec!["application/json", "application/txt", "application/xml"];
         get_header_autocompletion(data, &header_value_input);
 
         let headers_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
@@ -171,31 +158,31 @@ impl App {
 
         // connect the Button click to the callback
         button.connect_clicked(clone!(
-            button, verb_selector, url_input, payload_input, tx, headers_row => move |_| {
-                button.set_sensitive(false);
-                // and trigger HTTP thread
-                spawn_thread(
-                    &tx,
-                    gtk::ComboBoxText::get_text(&verb_selector),
-                    url_input.get_buffer().get_text().to_owned(),
-                    // compose headers
-                    Some(compose_headers(&headers_row)),
-                    Some(json!(payload_input.get_buffer().get_text().to_owned()))
-                );
-            }));
+        button, verb_selector, url_input, payload_input, tx, headers_row => move |_| {
+            button.set_sensitive(false);
+            // and trigger HTTP thread
+            spawn_thread(
+                &tx,
+                gtk::ComboBoxText::get_text(&verb_selector),
+                url_input.get_buffer().get_text().to_owned(),
+                // compose headers
+                Some(compose_headers(&headers_row)),
+                Some(json!(payload_input.get_buffer().get_text().to_owned()))
+            );
+        }));
 
         // connect the <Return> keypress to the callback
         url_input.connect_activate(clone!(
-            button, verb_selector, payload_input, tx, headers_row => move |url_input_fld| {
-                button.set_sensitive(false);
-                spawn_thread(
-                    &tx,
-                    gtk::ComboBoxText::get_text(&verb_selector),
-                    url_input_fld.get_buffer().get_text().to_owned(),
-                    Some(compose_headers(&headers_row)),
-                    Some(json!(payload_input.get_buffer().get_text().to_owned()))
-                );
-            }));
+        button, verb_selector, payload_input, tx, headers_row => move |url_input_fld| {
+            button.set_sensitive(false);
+            spawn_thread(
+                &tx,
+                gtk::ComboBoxText::get_text(&verb_selector),
+                url_input_fld.get_buffer().get_text().to_owned(),
+                Some(compose_headers(&headers_row)),
+                Some(json!(payload_input.get_buffer().get_text().to_owned()))
+            );
+        }));
 
         // container for the response
         let response_container = gtk::TextView::new();
@@ -217,11 +204,7 @@ impl App {
         // add the widget container to the window
         main_window.add(&layout);
 
-        let app = App {
-            main_window,
-            url_input,
-            header_bar,
-        };
+        let app = App { main_window, url_input, header_bar };
 
         // Create the application actions
         Action::create(&app, &application);
@@ -240,11 +223,10 @@ impl App {
     }
 
     pub fn on_startup(application: &gtk::Application) {
-
         let app = match App::new(application) {
             Ok(app) => app,
             Err(err) => {
-                eprintln!("Error creating app: {}",err);
+                eprintln!("Error creating app: {}", err);
                 return;
             }
         };
@@ -256,10 +238,7 @@ impl App {
         // cant get rid of this RefCell wrapping ...
         let app_container = RefCell::new(Some(app));
         application.connect_shutdown(move |_| {
-            let app = app_container
-                .borrow_mut()
-                .take()
-                .expect("Shutdown called multiple times");
+            let app = app_container.borrow_mut().take().expect("Shutdown called multiple times");
             app.on_shutdown();
         });
     }
@@ -267,8 +246,7 @@ impl App {
     fn on_activate(&self) {
         // Show our window and bring it to the foreground
         self.main_window.show_all();
-        self.main_window
-            .present_with_time((glib::get_monotonic_time() / 1000) as u32);
+        self.main_window.present_with_time((glib::get_monotonic_time() / 1000) as u32);
     }
 
     // Called when the application shuts down. We drop our app struct here
@@ -278,7 +256,6 @@ impl App {
 }
 
 impl Action {
-
     // The full action name as is used in e.g. menu models
     pub fn full_name(self) -> &'static str {
         match self {

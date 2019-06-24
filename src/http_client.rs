@@ -1,34 +1,27 @@
-use reqwest::{Client, StatusCode};
-use reqwest::Method;
 use reqwest::header::*;
+use reqwest::Method;
+use reqwest::{Client, StatusCode};
 use serde_derive::Deserialize;
 use serde_json::Value;
 use std::error::Error;
 
 pub struct HttpClient {
-    client: Client
+    client: Client,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct APIResponse {
     pub status_code: u16,
-    pub data: Value
+    pub data: Value,
 }
 
 impl HttpClient {
-
     pub fn new() -> HttpClient {
-        HttpClient {
-            client: Client::new(),
-        }
+        HttpClient { client: Client::new() }
     }
 
     pub fn post(&self, url: &str, headers: HeaderMap, data: &Value) -> Result<APIResponse, String> {
-        let req = self.client
-            .request(Method::POST, url)
-            .headers(headers)
-            .json(&data)
-            .send();
+        let req = self.client.request(Method::POST, url).headers(headers).json(&data).send();
         let mut resp = match req {
             Ok(x) => x,
             Err(err) => {
@@ -38,23 +31,18 @@ impl HttpClient {
             }
         };
 
-        assert_eq!(resp.status() < StatusCode::INTERNAL_SERVER_ERROR,
-                   true);
+        assert_eq!(resp.status() < StatusCode::INTERNAL_SERVER_ERROR, true);
         Ok(APIResponse {
             status_code: resp.status().as_u16(),
-            data: resp.json().unwrap_or(
-                json!({
-                    "status": resp.status().as_u16(),
-                    "detail": "Failed to deserialize response"
-                }))
+            data: resp.json().unwrap_or(json!({
+                "status": resp.status().as_u16(),
+                "detail": "Failed to deserialize response"
+            })),
         })
     }
 
     pub fn get(&self, url: &str, headers: HeaderMap) -> Result<APIResponse, String> {
-        let req = self.client
-            .request(Method::GET, url)
-            .headers(headers)
-            .send();
+        let req = self.client.request(Method::GET, url).headers(headers).send();
 
         let mut resp = match req {
             Ok(x) => x,
@@ -66,15 +54,13 @@ impl HttpClient {
             }
         };
 
-        assert_eq!(resp.status() < StatusCode::INTERNAL_SERVER_ERROR,
-                   true);
+        assert_eq!(resp.status() < StatusCode::INTERNAL_SERVER_ERROR, true);
         Ok(APIResponse {
             status_code: resp.status().as_u16(),
-            data: resp.json().unwrap_or(
-                json!({
-                    "status": resp.status().as_u16(),
-                    "detail": "Failed to deserialize response"
-                }))
+            data: resp.json().unwrap_or(json!({
+                "status": resp.status().as_u16(),
+                "detail": "Failed to deserialize response"
+            })),
         })
     }
 

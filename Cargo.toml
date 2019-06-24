@@ -5,11 +5,11 @@ authors = ["apiraino <apiraino@users.noreply.github.com>"]
 edition = "2018"
 
 [dependencies]
-glib = "0.7.1"
-gio = "0.6.0"
-gdk = "0.10.0"
-gtk = "0.6.0"
-reqwest = "0.9.16"
+glib = "0.8.0"
+gio = "0.7.0"
+gdk = "0.11.0"
+gtk = "0.7.0"
+reqwest = "0.9.18"
 serde_json = "1.0.39"
-serde_derive = "1.0.91"
-serde = "1.0.91"
+serde_derive = "1.0.93"
+serde = "1.0.93"

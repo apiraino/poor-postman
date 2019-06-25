@@ -108,25 +108,46 @@ impl App {
         // params: child, expand, fill, padding (px)
         verb_url_row.pack_start(&url_input, true, true, 10);
 
-        // Header settings
+        // HTTP Headers
         let header_title = gtk::Label::new(None);
         header_title.set_markup("<big>Headers:</big>");
+
+        let add_button = gtk::Button::new_with_label("Add");
+
         let header_name_input = gtk::Entry::new();
         let header_value_input = gtk::Entry::new();
 
+        // TODO: Try to give a composite ID or name to retrieve them later
         // header_name_input.set_name("header_name_input");
         // header_value_input.set_name("header_value_input");
 
+        // TODO: Dynamically add new items
+        // https://github.com/gtk-rs/examples/blob/master/src/bin/listbox_model.rs
+        // target/debug/listbox_model
+
+        // Create a ListBox container
+        let listbox = gtk::ListBox::new();
+
+        // Add this "row"
+        // https://paste.ubuntu.com/p/2TTkmBWdY4/
+
         // autocompletion for header names
         let data = vec!["Accept", "Authorization", "Content-Type"];
+        // let mut count = 0;
+        // for h in data.iter() {
+        //     let _id: &str = &format!("ID{}", count);
+        //     header_name_input.insert(count, Some(_id), h);
+        //     count += 1;
+        // }
         get_header_autocompletion(data, &header_name_input);
 
         // autocompletion for header values
-        let data = vec!["application/json", "application/txt", "application/xml"];
+        let data = vec!["application/json", "application/xml", "text/plain"];
         get_header_autocompletion(data, &header_value_input);
 
         let headers_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         headers_row.add(&header_title);
+        headers_row.add(&add_button);
         headers_row.pack_start(&header_name_input, true, true, 10);
         headers_row.pack_start(&header_value_input, true, true, 10);
 
@@ -184,7 +205,22 @@ impl App {
             );
         }));
 
-        // container for the response
+        // connect Add button click
+        add_button.connect_clicked(clone!(headers_row => move |btn| {
+            eprintln!("Add button clicked: {:?}", btn);
+
+            let header_key = gtk::Entry::new();
+            let header_val = gtk::Entry::new();
+
+            let new_row = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+            new_row.pack_start(&header_key, true, true, 10);
+            new_row.pack_start(&header_val, true, true, 10);
+
+            // TODO: Add this new "row" to the ListBox (somehow)
+
+        }));
+
+        // container for the HTTP response
         let response_container = gtk::TextView::new();
         response_container.set_editable(false);
         response_container.set_wrap_mode(gtk::WrapMode::Word);
